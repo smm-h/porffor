@@ -474,17 +474,9 @@ const generate = (scope, decl, global = false, name = undefined, valueUnused = f
     case 'TSEnumDeclaration':
       return cacheAst(decl, generateEnum(scope, decl));
 
-    case 'TSDeclareFunction': {
-      // Register declared functions as external imports (for FFI/linking)
-      const declName = decl.id?.name;
-      if (declName) {
-        const paramCount = (decl.params || []).length;
-        const retAnnotation = decl.returnType?.typeAnnotation?.type;
-        const isVoid = retAnnotation === 'TSVoidKeyword';
-        createImport(declName, paramCount, isVoid ? 0 : 1);
-      }
+    case 'TSDeclareFunction':
+      // Already registered as import in pre-scan (before currentFuncIndex is set)
       return cacheAst(decl, [ number(UNDEFINED) ]);
-    }
 
     default:
       // ignore typescript nodes
@@ -7555,6 +7547,17 @@ export default program => {
   depth = [];
   pages = new Map();
   data = [];
+  // Pre-scan: register TSDeclareFunction nodes as imports BEFORE setting currentFuncIndex,
+  // since imports must be registered before codegen to get correct function index offsets.
+  for (const node of (program.body || [])) {
+    if (node.type === 'TSDeclareFunction' && node.id?.name) {
+      const paramCount = (node.params || []).length;
+      const retAnnotation = node.returnType?.typeAnnotation?.type;
+      const isVoid = retAnnotation === 'TSVoidKeyword';
+      createImport(node.id.name, paramCount, isVoid ? 0 : 1);
+    }
+  }
+
   currentFuncIndex = importedFuncs.length;
   typeswitchDepth = 0;
   usedTypes = new Set([ TYPES.undefined, TYPES.number, TYPES.boolean, TYPES.function ]);
