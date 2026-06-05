@@ -176,15 +176,19 @@ export default (funcs, globals, tags, pages, data, noTreeshake = false) => {
   time('type section');
 
   if (importFuncs.length > 0) {
-    section(Section.import, unsignedLEB128_length(importFuncs.length) + importFuncs.length * 5);
+    byte(Section.import);
+    const importSizeOffset = offset, setImportSize = unsignedPost();
+
     unsigned(importFuncs.length);
     for (let i = 0; i < importFuncs.length; i++) {
       const x = importFuncs[i];
-      byte(0); byte(1);
-      byte(x.import.charCodeAt(0));
+      string('');
+      string(x.import);
       byte(ExportDesc.func);
       byte(getType(x.params, x.returns));
     }
+
+    setImportSize(offset - importSizeOffset - 5);
   }
   time('import section');
 

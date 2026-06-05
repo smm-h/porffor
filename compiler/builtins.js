@@ -50,7 +50,7 @@ export const createImport = (name, params, returns, js = null, c = null) => {
   }
 
   const call = importedFuncs.length;
-  const ident = String.fromCharCode(97 + importedFuncs.length);
+  const ident = name;
 
   const obj = importedFuncs[name] = importedFuncs[call] = new Number(call);
   obj.name = name;
