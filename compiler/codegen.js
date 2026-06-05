@@ -1,7 +1,7 @@
 import { Blocktype, Opcodes, Valtype, ValtypeSize } from './wasmSpec.js';
 import { number, ieee754_binary64, signedLEB128, unsignedLEB128, encodeVector } from './encoding.js';
 import { operatorOpcode } from './expression.js';
-import { BuiltinFuncs, BuiltinVars, importedFuncs, NULL, UNDEFINED } from './builtins.js';
+import { BuiltinFuncs, BuiltinVars, importedFuncs, createImport, NULL, UNDEFINED } from './builtins.js';
 import { TYPES, TYPE_FLAGS, TYPE_NAMES } from './types.js';
 import semantic from './semantic.js';
 import parse from './parse.js';
@@ -473,6 +473,18 @@ const generate = (scope, decl, global = false, name = undefined, valueUnused = f
 
     case 'TSEnumDeclaration':
       return cacheAst(decl, generateEnum(scope, decl));
+
+    case 'TSDeclareFunction': {
+      // Register declared functions as external imports (for FFI/linking)
+      const declName = decl.id?.name;
+      if (declName) {
+        const paramCount = (decl.params || []).length;
+        const retAnnotation = decl.returnType?.typeAnnotation?.type;
+        const isVoid = retAnnotation === 'TSVoidKeyword';
+        createImport(declName, paramCount, isVoid ? 0 : 1);
+      }
+      return cacheAst(decl, [ number(UNDEFINED) ]);
+    }
 
     default:
       // ignore typescript nodes
